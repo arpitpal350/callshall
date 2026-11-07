@@ -3,318 +3,102 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>VoiceLink – 2-Way P2P Voice Calling</title>
-  <!-- PeerJS WebRTC Signalling -->
+  <title>VoiceLink Pro – Reliable P2P Calling</title>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    }
-
-    body {
-      background-color: #0a0e17;
-      color: #f1f5f9;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      padding: 16px;
-    }
-
-    .container {
-      width: 100%;
-      max-width: 440px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    /* Card Box */
-    .card {
-      background: #111827;
-      border: 1px solid #1f2937;
-      border-radius: 20px;
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 18px;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
-    }
-
-    header {
-      text-align: center;
-    }
-
-    header h1 {
-      font-size: 1.6rem;
-      color: #38bdf8;
-      letter-spacing: 0.5px;
-    }
-
-    header p {
-      font-size: 0.85rem;
-      color: #94a3b8;
-      margin-top: 4px;
-    }
-
-    /* ID Display */
-    .id-box {
-      background: #0b0f19;
-      border: 1px dashed #38bdf8;
-      padding: 12px;
-      border-radius: 12px;
-      text-align: center;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    .id-box:hover {
-      background: #0f172a;
-    }
-
-    .id-value {
-      font-family: monospace;
-      font-size: 1.15rem;
-      font-weight: 700;
-      color: #38bdf8;
-      margin-top: 4px;
-      letter-spacing: 1px;
-    }
-
-    input[type="text"] {
-      width: 100%;
-      padding: 14px;
-      background: #0b0f19;
-      border: 1px solid #374151;
-      border-radius: 12px;
-      color: white;
-      font-size: 1rem;
-      outline: none;
-      text-align: center;
-      font-family: monospace;
-    }
-
-    input[type="text"]:focus {
-      border-color: #38bdf8;
-    }
-
-    /* Buttons */
-    .btn {
-      width: 100%;
-      padding: 14px;
-      border: none;
-      border-radius: 12px;
-      font-size: 1rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #090d16; color: #f1f5f9; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 16px; }
+    .container { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 16px; }
+    .card { background: #111827; border: 1px solid #1f2937; border-radius: 20px; padding: 24px; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    header { text-align: center; }
+    header h1 { font-size: 1.5rem; color: #38bdf8; }
+    header p { font-size: 0.82rem; color: #94a3b8; margin-top: 4px; }
+    
+    .id-box { background: #0b0f19; border: 1px dashed #38bdf8; padding: 12px; border-radius: 12px; text-align: center; cursor: pointer; }
+    .id-value { font-family: monospace; font-size: 1.15rem; font-weight: 700; color: #38bdf8; letter-spacing: 1px; }
+    
+    input[type="text"] { width: 100%; padding: 14px; background: #0b0f19; border: 1px solid #374151; border-radius: 12px; color: white; font-size: 1rem; outline: none; text-align: center; font-family: monospace; }
+    input[type="text"]:focus { border-color: #38bdf8; }
+    
+    .btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
     .btn-green { background: #10b981; color: white; }
     .btn-green:hover { background: #059669; }
-
     .btn-red { background: #ef4444; color: white; }
     .btn-red:hover { background: #dc2626; }
+    .btn:disabled { background: #374151; color: #6b7280; cursor: not-allowed; }
 
-    .btn-blue { background: #0284c7; color: white; }
-    .btn-blue:hover { background: #0369a1; }
+    .status-text { font-size: 0.8rem; color: #94a3b8; text-align: center; }
 
-    .btn:disabled {
-      background: #374151;
-      color: #6b7280;
-      cursor: not-allowed;
-    }
+    /* In-Call Screen */
+    #activeCallScreen { display: none; text-align: center; }
+    .timer-badge { display: inline-block; background: #1e293b; padding: 6px 14px; border-radius: 20px; font-family: monospace; font-size: 1.1rem; color: #10b981; font-weight: 700; }
+    .call-controls { display: flex; gap: 10px; margin-top: 10px; }
+    .control-btn { flex: 1; padding: 12px; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 10px; font-weight: 600; cursor: pointer; }
+    .control-btn.active-off { background: #7f1d1d; border-color: #ef4444; color: #fca5a5; }
 
-    /* Status Label */
-    .status-text {
-      font-size: 0.85rem;
-      color: #94a3b8;
-      text-align: center;
-    }
+    canvas { width: 100%; height: 44px; background: #0b0f19; border-radius: 8px; border: 1px solid #1f2937; display: block; }
+    .meter-label { font-size: 0.75rem; color: #94a3b8; text-align: left; text-transform: uppercase; margin-bottom: 4px; }
 
-    /* Active Call UI */
-    #activeCallScreen {
-      display: none;
-      text-align: center;
-    }
-
-    .timer-badge {
-      display: inline-block;
-      background: #1e293b;
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-family: monospace;
-      font-size: 1.1rem;
-      color: #10b981;
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-
-    .call-partner {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: #f1f5f9;
-    }
-
-    .meter-label {
-      font-size: 0.75rem;
-      color: #94a3b8;
-      text-align: left;
-      margin-bottom: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    canvas {
-      width: 100%;
-      height: 48px;
-      background: #0b0f19;
-      border-radius: 8px;
-      border: 1px solid #1f2937;
-      display: block;
-    }
-
-    .call-controls {
-      display: flex;
-      gap: 12px;
-      margin-top: 10px;
-    }
-
-    .control-btn {
-      flex: 1;
-      padding: 12px 8px;
-      background: #1e293b;
-      border: 1px solid #334155;
-      color: white;
-      border-radius: 12px;
-      font-weight: 600;
-      font-size: 0.85rem;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    .control-btn.active-off {
-      background: #7f1d1d;
-      border-color: #ef4444;
-      color: #fca5a5;
-    }
-
-    /* Popups (Incoming & Outgoing Calling) */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.8);
-      backdrop-filter: blur(4px);
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
-      z-index: 50;
-    }
-
-    .modal-box {
-      width: 100%;
-      max-width: 360px;
-      background: #111827;
-      border: 1px solid #374151;
-      border-radius: 20px;
-      padding: 24px;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      animation: pop-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    @keyframes pop-in {
-      from { transform: scale(0.9); opacity: 0; }
-      to { transform: scale(1); opacity: 1; }
-    }
-
-    .pulse-avatar {
-      width: 72px;
-      height: 72px;
-      margin: 0 auto;
-      border-radius: 50%;
-      background: #0284c7;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2rem;
-      animation: avatar-pulse 1.6s infinite;
-    }
-
-    @keyframes avatar-pulse {
-      0% { box-shadow: 0 0 0 0 rgba(2, 132, 199, 0.7); }
-      70% { box-shadow: 0 0 0 18px rgba(2, 132, 199, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(2, 132, 199, 0); }
-    }
+    /* Calling Popups */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 16px; z-index: 50; }
+    .modal-box { width: 100%; max-width: 340px; background: #111827; border: 1px solid #374151; border-radius: 20px; padding: 24px; text-align: center; display: flex; flex-direction: column; gap: 16px; }
+    .pulse-avatar { width: 68px; height: 68px; margin: 0 auto; border-radius: 50%; background: #0284c7; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; animation: pulse-ring 1.5s infinite; }
+    @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(2,132,199,0.7); } 70% { box-shadow: 0 0 0 16px rgba(2,132,199,0); } 100% { box-shadow: 0 0 0 0 rgba(2,132,199,0); } }
   </style>
 </head>
 <body>
 
   <div class="container">
     <header>
-      <h1>VoiceLink</h1>
-      <p>Direct Two-Way Encrypted Voice Call</p>
+      <h1>VoiceLink Pro</h1>
+      <p>P2P Audio Calling with TURN Relay Support</p>
     </header>
 
-    <!-- 1. DIALER / IDLE SCREEN -->
+    <!-- IDLE / DIALER -->
     <div class="card" id="dialerScreen">
       <div>
-        <div class="meter-label" style="text-align:center;">Your Personal Call ID</div>
-        <div class="id-box" onclick="copyMyId()">
-          <div class="id-value" id="myPeerId">Registering on network...</div>
-          <small style="color: #64748b; font-size: 0.75rem;">(Click to Copy)</small>
+        <div class="meter-label" style="text-align:center;">Your Personal ID</div>
+        <div class="id-box" onclick="copyId()">
+          <div class="id-value" id="myPeerId">Connecting...</div>
+          <small style="color: #64748b; font-size: 0.72rem;">(Tap to copy)</small>
         </div>
       </div>
 
       <div>
-        <label class="meter-label">Call Friend by ID</label>
-        <input type="text" id="targetPeerId" placeholder="e.g. vl-9482" />
+        <label class="meter-label">Enter Peer ID</label>
+        <input type="text" id="targetPeerId" placeholder="e.g. vl-4821" />
       </div>
 
-      <button class="btn btn-green" id="callBtn" onclick="initiateCall()" disabled>
-        📞 Start Voice Call
+      <button class="btn btn-green" id="callBtn" onclick="startCallFlow()" disabled>
+        📞 Call Now
       </button>
 
-      <div class="status-text" id="appStatus">Connecting to Peer network...</div>
+      <div class="status-text" id="appStatus">Connecting to signaling network...</div>
     </div>
 
-    <!-- 2. IN-CALL SCREEN -->
+    <!-- IN-CALL SCREEN -->
     <div class="card" id="activeCallScreen">
       <div>
         <div class="timer-badge" id="callTimer">00:00</div>
-        <div class="call-partner" id="connectedPartnerName">Talking with: vl-XXXX</div>
+        <div style="font-size: 1rem; font-weight: 700; margin-top: 6px;" id="partnerName">In Call</div>
       </div>
 
-      <!-- Local Microphone Waveform -->
       <div>
-        <div class="meter-label">Your Voice (Microphone)</div>
-        <canvas id="localAudioCanvas"></canvas>
+        <div class="meter-label">Your Voice</div>
+        <canvas id="localCanvas"></canvas>
       </div>
 
-      <!-- Remote Friend Voice Waveform -->
       <div>
-        <div class="meter-label">Partner's Voice (Speaker)</div>
-        <canvas id="remoteAudioCanvas"></canvas>
+        <div class="meter-label">Partner's Voice</div>
+        <canvas id="remoteCanvas"></canvas>
       </div>
 
-      <!-- In-Call Actions -->
       <div class="call-controls">
-        <button class="control-btn" id="muteMicBtn" onclick="toggleMuteMic()">🎤 Mute</button>
+        <button class="control-btn" id="muteBtn" onclick="toggleMute()">🎤 Mute</button>
         <button class="control-btn" id="deafenBtn" onclick="toggleDeafen()">🔊 Deafen</button>
       </div>
 
-      <button class="btn btn-red" onclick="hangUpCall()">
+      <button class="btn btn-red" onclick="hangUp(true)">
         🛑 End Call
       </button>
     </div>
@@ -325,318 +109,345 @@
     <div class="modal-box">
       <div class="pulse-avatar">📲</div>
       <div>
-        <h3 style="font-size: 1.2rem;">Incoming Voice Call</h3>
-        <p style="color: #94a3b8; font-family: monospace; margin-top: 4px;" id="incomingCallerId">vl-XXXX</p>
+        <h3>Incoming Voice Call</h3>
+        <p style="font-family: monospace; color: #38bdf8; margin-top: 4px;" id="callerIdLabel">vl-XXXX</p>
       </div>
       <div style="display: flex; gap: 10px;">
-        <button class="btn btn-green" onclick="acceptIncomingCall()">Accept</button>
-        <button class="btn btn-red" onclick="rejectIncomingCall()">Decline</button>
+        <button class="btn btn-green" onclick="acceptCall()">Accept</button>
+        <button class="btn btn-red" onclick="rejectCall()">Decline</button>
       </div>
     </div>
   </div>
 
-  <!-- OUTGOING CALLING MODAL -->
+  <!-- OUTGOING CALL MODAL -->
   <div class="modal-overlay" id="outgoingModal">
     <div class="modal-box">
       <div class="pulse-avatar">📞</div>
       <div>
-        <h3 style="font-size: 1.2rem;">Calling...</h3>
-        <p style="color: #94a3b8; font-family: monospace; margin-top: 4px;" id="outgoingTargetId">vl-XXXX</p>
-        <small style="color: #64748b;">Waiting for them to pick up...</small>
+        <h3>Calling...</h3>
+        <p style="font-family: monospace; color: #38bdf8; margin-top: 4px;" id="dialingIdLabel">vl-XXXX</p>
+        <small style="color: #64748b;" id="dialingSubtext">Ringing...</small>
       </div>
-      <button class="btn btn-red" onclick="hangUpCall()">Cancel</button>
+      <button class="btn btn-red" onclick="cancelOutgoingCall()">Cancel</button>
     </div>
   </div>
 
-  <!-- Hidden Audio Player for Remote Stream -->
   <audio id="remoteAudio" autoplay playsinline></audio>
 
   <script>
-    // --- App State ---
-    let myPeer = null;
+    // --- STUN + TURN SERVERS (Crucial for Mobile & Symmetric NATs) ---
+    const PEER_CONFIG = {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        // Public TURN Relay from OpenRelay Project (bypasses carrier NAT firewalls)
+        {
+          urls: 'turn:openrelay.metered.ca:80',
+          username: 'openrelayproject',
+          credential: 'openrelayproject'
+        },
+        {
+          urls: 'turn:openrelay.metered.ca:443',
+          username: 'openrelayproject',
+          credential: 'openrelayproject'
+        },
+        {
+          urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+          username: 'openrelayproject',
+          credential: 'openrelayproject'
+        }
+      ]
+    };
+
+    let peer = null;
     let localStream = null;
     let currentCall = null;
-    let pendingIncomingCall = null;
+    let dataConn = null; // Signaling channel
+    let remotePeerId = null;
 
-    let isMicMuted = false;
-    let isDeafened = false;
+    let localCtx = null, localAnalyser = null, localAnim = null;
+    let remoteCtx = null, remoteAnalyser = null, remoteAnim = null;
+    let timerInt = null, callStart = null;
+    let ringCtx = null, ringTimer = null;
 
-    // Visualizers & Audio Context
-    let localAudioCtx = null, localAnalyser = null, localAnimId = null;
-    let remoteAudioCtx = null, remoteAnalyser = null, remoteAnimId = null;
+    const myId = `vl-${Math.floor(1000 + Math.random() * 9000)}`;
 
-    // Call duration timer
-    let callStartTime = null;
-    let timerInterval = null;
-
-    // Synthesized Sound FX (Ringtones)
-    let ringtoneOscillator = null;
-    let ringtoneGain = null;
-    let ringtoneAudioCtx = null;
-    let ringtoneTimer = null;
-
-    // Generate clean short IDs
-    const myCleanId = `vl-${Math.floor(1000 + Math.random() * 9000)}`;
-
-    // --- 1. Peer Initialization ---
     function init() {
-      myPeer = new Peer(myCleanId, {
+      peer = new Peer(myId, {
         debug: 1,
-        config: {
-          iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' }
-          ]
-        }
+        config: PEER_CONFIG
       });
 
-      myPeer.on('open', (id) => {
+      peer.on('open', (id) => {
         document.getElementById('myPeerId').innerText = id;
         document.getElementById('callBtn').disabled = false;
-        document.getElementById('appStatus').innerText = "Online. Ready to dial or receive calls.";
+        document.getElementById('appStatus').innerText = "Online. Ready to connect.";
+        startHeartbeat(); // Keep connection alive
       });
 
-      // Handle Incoming Calls
-      myPeer.on('call', (incoming) => {
-        // If already in a call, busy reject
-        if (currentCall) {
-          incoming.close();
+      // 1. DATA CHANNEL (Signaling: Ring, Accept, Decline, Hangup)
+      peer.on('connection', (conn) => {
+        if (currentCall || dataConn) {
+          // If already in a call, send busy
+          conn.on('open', () => conn.send({ type: 'BUSY' }));
           return;
         }
 
-        pendingIncomingCall = incoming;
-        document.getElementById('incomingCallerId').innerText = incoming.peer;
-        document.getElementById('incomingModal').style.display = 'flex';
-        playProceduralRingtone('incoming');
+        dataConn = conn;
+        setupDataChannel(conn);
       });
 
-      myPeer.on('error', (err) => {
-        console.error("PeerJS error:", err);
-        alert(`Connection Error: ${err.type}`);
-        hangUpCall();
+      // 2. MEDIA CHANNEL (Audio)
+      peer.on('call', (call) => {
+        currentCall = call;
+        // Don't auto-answer yet! Wait for user to click Accept.
+      });
+
+      peer.on('disconnected', () => {
+        peer.reconnect();
+      });
+
+      peer.on('error', (err) => {
+        console.error("Peer error:", err);
+        if (err.type === 'peer-unavailable') {
+          alert("Peer ID not found or offline.");
+          hangUp(false);
+        }
       });
     }
 
-    // --- 2. Outgoing Call Flow ---
-    async function initiateCall() {
-      const targetId = document.getElementById('targetPeerId').value.trim();
-      if (!targetId) {
-        alert("Enter a Friend's Call ID first!");
-        return;
-      }
-      if (targetId === myPeer.id) {
-        alert("You cannot call your own ID!");
-        return;
-      }
+    // --- Data Channel Protocol ---
+    function setupDataChannel(conn) {
+      conn.on('data', (data) => {
+        switch (data.type) {
+          case 'RING':
+            remotePeerId = conn.peer;
+            document.getElementById('callerIdLabel').innerText = remotePeerId;
+            document.getElementById('incomingModal').style.display = 'flex';
+            playChime('incoming');
+            break;
 
-      // Pre-warm local mic
-      const gotMic = await requestLocalStream();
+          case 'ACCEPT':
+            stopChime();
+            document.getElementById('outgoingModal').style.display = 'none';
+            // Partner accepted! Send audio stream now
+            sendAudioStream(conn.peer);
+            break;
+
+          case 'DECLINE':
+            alert("Call declined.");
+            hangUp(false);
+            break;
+
+          case 'CANCEL':
+            stopChime();
+            document.getElementById('incomingModal').style.display = 'none';
+            resetState();
+            break;
+
+          case 'BUSY':
+            alert("User is currently on another call.");
+            hangUp(false);
+            break;
+
+          case 'HANGUP':
+            hangUp(false);
+            break;
+        }
+      });
+
+      conn.on('close', () => {
+        hangUp(false);
+      });
+    }
+
+    // --- Outgoing Call Flow ---
+    async function startCallFlow() {
+      const target = document.getElementById('targetPeerId').value.trim();
+      if (!target || target === myId) return alert("Enter a valid Friend ID!");
+
+      const gotMic = await getMic();
       if (!gotMic) return;
 
-      document.getElementById('outgoingTargetId').innerText = targetId;
+      remotePeerId = target;
+      document.getElementById('dialingIdLabel').innerText = target;
       document.getElementById('outgoingModal').style.display = 'flex';
-      playProceduralRingtone('outgoing');
+      playChime('outgoing');
 
-      // Place Call
-      currentCall = myPeer.call(targetId, localStream);
+      // 1. Establish Signaling Link
+      dataConn = peer.connect(target, { reliable: true });
+      setupDataChannel(dataConn);
 
-      currentCall.on('stream', (remoteStream) => {
-        stopRingtone();
-        document.getElementById('outgoingModal').style.display = 'none';
-        attachCallSession(remoteStream, targetId);
-      });
-
-      currentCall.on('close', () => {
-        hangUpCall();
+      dataConn.on('open', () => {
+        dataConn.send({ type: 'RING' });
       });
     }
 
-    // --- 3. Incoming Call Flow ---
-    async function acceptIncomingCall() {
-      stopRingtone();
+    // Caller transmits media once Receiver has accepted
+    function sendAudioStream(targetId) {
+      currentCall = peer.call(targetId, localStream);
+      
+      currentCall.on('stream', (remoteStream) => {
+        attachSession(remoteStream, targetId);
+      });
+
+      currentCall.on('close', () => hangUp(false));
+    }
+
+    // --- Incoming Call Flow ---
+    async function acceptCall() {
+      stopChime();
       document.getElementById('incomingModal').style.display = 'none';
 
-      const gotMic = await requestLocalStream();
+      const gotMic = await getMic();
       if (!gotMic) {
-        pendingIncomingCall.close();
-        pendingIncomingCall = null;
+        if (dataConn) dataConn.send({ type: 'DECLINE' });
+        resetState();
         return;
       }
 
-      currentCall = pendingIncomingCall;
-      currentCall.answer(localStream); // Answer with our microphone stream
+      // Notify caller that we accepted
+      dataConn.send({ type: 'ACCEPT' });
 
-      currentCall.on('stream', (remoteStream) => {
-        attachCallSession(remoteStream, currentCall.peer);
-      });
-
-      currentCall.on('close', () => {
-        hangUpCall();
-      });
-    }
-
-    function rejectIncomingCall() {
-      stopRingtone();
-      document.getElementById('incomingModal').style.display = 'none';
-      if (pendingIncomingCall) {
-        pendingIncomingCall.close();
-        pendingIncomingCall = null;
+      // When caller initiates the media call, answer with our stream
+      if (currentCall) {
+        currentCall.answer(localStream);
+        currentCall.on('stream', (remoteStream) => {
+          attachSession(remoteStream, currentCall.peer);
+        });
+        currentCall.on('close', () => hangUp(false));
+      } else {
+        // If media packet hasn't landed yet, listen for it
+        peer.once('call', (call) => {
+          currentCall = call;
+          call.answer(localStream);
+          call.on('stream', (remoteStream) => {
+            attachSession(remoteStream, call.peer);
+          });
+          call.on('close', () => hangUp(false));
+        });
       }
     }
 
-    // --- 4. Active Call Session Handling ---
-    function attachCallSession(remoteStream, partnerId) {
-      // Switch UI
+    function rejectCall() {
+      stopChime();
+      document.getElementById('incomingModal').style.display = 'none';
+      if (dataConn) dataConn.send({ type: 'DECLINE' });
+      resetState();
+    }
+
+    function cancelOutgoingCall() {
+      if (dataConn) dataConn.send({ type: 'CANCEL' });
+      hangUp(false);
+    }
+
+    // --- Active Session ---
+    function attachSession(stream, partnerId) {
       document.getElementById('dialerScreen').style.display = 'none';
       document.getElementById('activeCallScreen').style.display = 'flex';
-      document.getElementById('connectedPartnerName').innerText = `Talking with: ${partnerId}`;
+      document.getElementById('partnerName').innerText = `Talking with: ${partnerId}`;
 
-      // Hook up remote audio
-      const audioEl = document.getElementById('remoteAudio');
-      audioEl.srcObject = remoteStream;
-      audioEl.play().catch(e => console.warn("Autoplay block:", e));
+      const audio = document.getElementById('remoteAudio');
+      audio.srcObject = stream;
+      audio.play().catch(e => console.warn(e));
 
-      // Visualizers
-      visualizeStream(localStream, 'localAudioCanvas', 'local');
-      visualizeStream(remoteStream, 'remoteAudioCanvas', 'remote');
+      visualize(localStream, 'localCanvas', 'local');
+      visualize(stream, 'remoteCanvas', 'remote');
 
-      // Start duration clock
       startTimer();
     }
 
-    function hangUpCall() {
-      stopRingtone();
-
-      if (currentCall) {
-        currentCall.close();
-        currentCall = null;
-      }
-      if (pendingIncomingCall) {
-        pendingIncomingCall.close();
-        pendingIncomingCall = null;
+    function hangUp(sendSignal) {
+      stopChime();
+      if (sendSignal && dataConn && dataConn.open) {
+        dataConn.send({ type: 'HANGUP' });
       }
 
-      // Close Mic Tracks
-      if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
-        localStream = null;
-      }
-
-      const audioEl = document.getElementById('remoteAudio');
-      audioEl.srcObject = null;
-
-      // Reset Audio Visualizers
-      stopVisualizer('local');
-      stopVisualizer('remote');
-
-      // Reset Timer
-      stopTimer();
-
-      // Reset Buttons & Screens
-      isMicMuted = false;
-      isDeafened = false;
-      document.getElementById('muteMicBtn').classList.remove('active-off');
-      document.getElementById('muteMicBtn').innerText = "🎤 Mute";
-      document.getElementById('deafenBtn').classList.remove('active-off');
-      document.getElementById('deafenBtn').innerText = "🔊 Deafen";
+      resetState();
 
       document.getElementById('outgoingModal').style.display = 'none';
       document.getElementById('incomingModal').style.display = 'none';
       document.getElementById('activeCallScreen').style.display = 'none';
       document.getElementById('dialerScreen').style.display = 'flex';
-      document.getElementById('appStatus').innerText = "Call ended. Ready for next call.";
+      document.getElementById('appStatus').innerText = "Call ended.";
     }
 
-    // --- 5. Media Stream & Hardware Controls ---
-    async function requestLocalStream() {
+    function resetState() {
+      if (currentCall) { currentCall.close(); currentCall = null; }
+      if (dataConn) { dataConn.close(); dataConn = null; }
+      if (localStream) {
+        localStream.getTracks().forEach(t => t.stop());
+        localStream = null;
+      }
+      document.getElementById('remoteAudio').srcObject = null;
+      stopVisualizer('local');
+      stopVisualizer('remote');
+      stopTimer();
+    }
+
+    // --- Hardware Access ---
+    async function getMic() {
       try {
         localStream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true
-          },
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
           video: false
         });
         return true;
       } catch (err) {
-        alert("Microphone permission denied! Cannot join call.");
+        alert("Microphone permission required to make calls.");
         return false;
       }
     }
 
-    function toggleMuteMic() {
+    let micMuted = false, deaf = false;
+    function toggleMute() {
       if (!localStream) return;
-      isMicMuted = !isMicMuted;
-      localStream.getAudioTracks()[0].enabled = !isMicMuted;
-
-      const btn = document.getElementById('muteMicBtn');
-      if (isMicMuted) {
-        btn.classList.add('active-off');
-        btn.innerText = "🔇 Unmute";
-      } else {
-        btn.classList.remove('active-off');
-        btn.innerText = "🎤 Mute";
-      }
+      micMuted = !micMuted;
+      localStream.getAudioTracks()[0].enabled = !micMuted;
+      document.getElementById('muteBtn').innerText = micMuted ? "🔇 Unmute" : "🎤 Mute";
+      document.getElementById('muteBtn').classList.toggle('active-off', micMuted);
     }
 
     function toggleDeafen() {
-      const audioEl = document.getElementById('remoteAudio');
-      isDeafened = !isDeafened;
-      audioEl.muted = isDeafened;
-
-      const btn = document.getElementById('deafenBtn');
-      if (isDeafened) {
-        btn.classList.add('active-off');
-        btn.innerText = "🔈 Undeafen";
-      } else {
-        btn.classList.remove('active-off');
-        btn.innerText = "🔊 Deafen";
-      }
+      const audio = document.getElementById('remoteAudio');
+      deaf = !deaf;
+      audio.muted = deaf;
+      document.getElementById('deafenBtn').innerText = deaf ? "🔈 Undeafen" : "🔊 Deafen";
+      document.getElementById('deafenBtn').classList.toggle('active-off', deaf);
     }
 
-    // --- 6. Live Audio Visualizer (Dual Bars) ---
-    function visualizeStream(stream, canvasId, type) {
+    // --- Visualizer ---
+    function visualize(stream, canvasId, type) {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const source = ctx.createMediaStreamSource(stream);
+      const src = ctx.createMediaStreamSource(stream);
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 64;
-      source.connect(analyser);
+      src.connect(analyser);
 
-      if (type === 'local') {
-        localAudioCtx = ctx;
-        localAnalyser = analyser;
-      } else {
-        remoteAudioCtx = ctx;
-        remoteAnalyser = analyser;
-      }
+      if (type === 'local') { localCtx = ctx; localAnalyser = analyser; }
+      else { remoteCtx = ctx; remoteAnalyser = analyser; }
 
       const canvas = document.getElementById(canvasId);
       canvas.width = canvas.offsetWidth;
       canvas.height = canvas.offsetHeight;
-      const canvasCtx = canvas.getContext('2d');
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
+      const cCtx = canvas.getContext('2d');
+      const data = new Uint8Array(analyser.frequencyBinCount);
 
       function draw() {
         const anim = requestAnimationFrame(draw);
-        if (type === 'local') localAnimId = anim;
-        else remoteAnimId = anim;
+        if (type === 'local') localAnim = anim; else remoteAnim = anim;
 
-        analyser.getByteFrequencyData(dataArray);
+        analyser.getByteFrequencyData(data);
+        cCtx.fillStyle = '#0b0f19';
+        cCtx.fillRect(0, 0, canvas.width, canvas.height);
 
-        canvasCtx.fillStyle = '#0b0f19';
-        canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
-
-        const barWidth = (canvas.width / bufferLength) * 1.5;
+        const w = (canvas.width / data.length) * 1.5;
         let x = 0;
-
-        for (let i = 0; i < bufferLength; i++) {
-          const barHeight = (dataArray[i] / 255) * canvas.height;
-          // Sky blue for local, emerald green for partner
-          canvasCtx.fillStyle = (type === 'local') ? '#38bdf8' : '#10b981';
-          canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
-          x += barWidth + 2;
+        for (let i = 0; i < data.length; i++) {
+          const h = (data[i] / 255) * canvas.height;
+          cCtx.fillStyle = type === 'local' ? '#38bdf8' : '#10b981';
+          cCtx.fillRect(x, canvas.height - h, w, h);
+          x += w + 2;
         }
       }
       draw();
@@ -644,98 +455,76 @@
 
     function stopVisualizer(type) {
       if (type === 'local') {
-        if (localAnimId) cancelAnimationFrame(localAnimId);
-        if (localAudioCtx && localAudioCtx.state !== 'closed') localAudioCtx.close();
-        clearCanvas('localAudioCanvas');
+        if (localAnim) cancelAnimationFrame(localAnim);
+        if (localCtx && localCtx.state !== 'closed') localCtx.close();
       } else {
-        if (remoteAnimId) cancelAnimationFrame(remoteAnimId);
-        if (remoteAudioCtx && remoteAudioCtx.state !== 'closed') remoteAudioCtx.close();
-        clearCanvas('remoteAudioCanvas');
+        if (remoteAnim) cancelAnimationFrame(remoteAnim);
+        if (remoteCtx && remoteCtx.state !== 'closed') remoteCtx.close();
       }
     }
 
-    function clearCanvas(id) {
-      const canvas = document.getElementById(id);
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#0b0f19';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-
-    // --- 7. Call Duration Timer ---
+    // --- Timer ---
     function startTimer() {
-      callStartTime = Date.now();
-      timerInterval = setInterval(() => {
-        const diff = Math.floor((Date.now() - callStartTime) / 1000);
-        const mins = String(Math.floor(diff / 60)).padStart(2, '0');
-        const secs = String(diff % 60).padStart(2, '0');
-        document.getElementById('callTimer').innerText = `${mins}:${secs}`;
+      callStart = Date.now();
+      timerInt = setInterval(() => {
+        const d = Math.floor((Date.now() - callStart) / 1000);
+        const m = String(Math.floor(d / 60)).padStart(2, '0');
+        const s = String(d % 60).padStart(2, '0');
+        document.getElementById('callTimer').innerText = `${m}:${s}`;
       }, 1000);
     }
 
     function stopTimer() {
-      if (timerInterval) clearInterval(timerInterval);
+      if (timerInt) clearInterval(timerInt);
       document.getElementById('callTimer').innerText = '00:00';
     }
 
-    // --- 8. Procedural Ringtone Engine (Zero External Audio Files) ---
-    function playProceduralRingtone(type) {
-      stopRingtone();
-      ringtoneAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-      function pulse() {
-        if (!ringtoneAudioCtx || ringtoneAudioCtx.state === 'closed') return;
-
-        const osc = ringtoneAudioCtx.createOscillator();
-        const gain = ringtoneAudioCtx.createGain();
-        osc.connect(gain);
-        gain.connect(ringtoneAudioCtx.destination);
-
-        const now = ringtoneAudioCtx.currentTime;
-
+    // --- Ringtone Synthesis ---
+    function playChime(type) {
+      stopChime();
+      ringCtx = new (window.AudioContext || window.webkitAudioContext)();
+      function tone() {
+        if (!ringCtx || ringCtx.state === 'closed') return;
+        const osc = ringCtx.createOscillator();
+        const g = ringCtx.createGain();
+        osc.connect(g); g.connect(ringCtx.destination);
+        const t = ringCtx.currentTime;
         if (type === 'outgoing') {
-          // Standard PBX dial tone beep (440Hz)
-          osc.frequency.setValueAtTime(440, now);
-          gain.gain.setValueAtTime(0.08, now);
-          gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
-          osc.start(now);
-          osc.stop(now + 1.2);
+          osc.frequency.setValueAtTime(440, t);
+          g.gain.setValueAtTime(0.08, t);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + 1.2);
+          osc.start(t); osc.stop(t + 1.2);
         } else {
-          // Pleasant two-tone chime (659Hz -> 523Hz)
-          osc.frequency.setValueAtTime(659.25, now);
-          osc.frequency.setValueAtTime(523.25, now + 0.2);
-          gain.gain.setValueAtTime(0.12, now);
-          gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.8);
-          osc.start(now);
-          osc.stop(now + 0.8);
+          osc.frequency.setValueAtTime(659, t);
+          osc.frequency.setValueAtTime(523, t + 0.2);
+          g.gain.setValueAtTime(0.12, t);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + 0.8);
+          osc.start(t); osc.stop(t + 0.8);
         }
       }
-
-      pulse();
-      ringtoneTimer = setInterval(pulse, type === 'outgoing' ? 2500 : 2000);
+      tone();
+      ringTimer = setInterval(tone, type === 'outgoing' ? 2500 : 2000);
     }
 
-    function stopRingtone() {
-      if (ringtoneTimer) {
-        clearInterval(ringtoneTimer);
-        ringtoneTimer = null;
-      }
-      if (ringtoneAudioCtx && ringtoneAudioCtx.state !== 'closed') {
-        ringtoneAudioCtx.close().catch(() => {});
-        ringtoneAudioCtx = null;
-      }
+    function stopChime() {
+      if (ringTimer) clearInterval(ringTimer);
+      if (ringCtx && ringCtx.state !== 'closed') ringCtx.close();
     }
 
-    // Utility: Quick Copy
-    function copyMyId() {
-      const id = document.getElementById('myPeerId').innerText;
-      if (id && !id.includes('...')) {
-        navigator.clipboard.writeText(id);
-        alert(`Copied Call ID: ${id}`);
-      }
+    // Keep WebSocket Alive on PeerJS Public Server
+    function startHeartbeat() {
+      setInterval(() => {
+        if (peer && peer.socket && peer.socket._open) {
+          peer.socket.send({ type: 'HEARTBEAT' });
+        }
+      }, 20000);
     }
 
-    // Boot
+    function copyId() {
+      navigator.clipboard.writeText(document.getElementById('myPeerId').innerText);
+      alert("ID Copied!");
+    }
+
     window.addEventListener('DOMContentLoaded', init);
   </script>
 </body>
