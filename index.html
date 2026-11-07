@@ -3,20 +3,24 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>VoiceLink Pro – Reliable P2P Calling</title>
+  <title>VoiceLink Pro – Smart P2P Calling</title>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background-color: #090d16; color: #f1f5f9; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 16px; }
-    .container { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 16px; }
+    .container { width: 100%; max-width: 430px; display: flex; flex-direction: column; gap: 16px; }
     .card { background: #111827; border: 1px solid #1f2937; border-radius: 20px; padding: 24px; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
     header { text-align: center; }
     header h1 { font-size: 1.5rem; color: #38bdf8; }
     header p { font-size: 0.82rem; color: #94a3b8; margin-top: 4px; }
     
-    .id-box { background: #0b0f19; border: 1px dashed #38bdf8; padding: 12px; border-radius: 12px; text-align: center; cursor: pointer; }
-    .id-value { font-family: monospace; font-size: 1.15rem; font-weight: 700; color: #38bdf8; letter-spacing: 1px; }
+    .id-card { background: #0b0f19; border: 1px dashed #38bdf8; padding: 14px; border-radius: 12px; text-align: center; }
+    .id-value { font-family: monospace; font-size: 1.2rem; font-weight: 700; color: #38bdf8; letter-spacing: 1px; }
     
+    .link-btn-group { display: flex; gap: 8px; margin-top: 8px; }
+    .mini-btn { flex: 1; padding: 8px; background: #1e293b; border: 1px solid #334155; color: #94a3b8; border-radius: 8px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: 0.2s; }
+    .mini-btn:hover { background: #334155; color: white; }
+
     input[type="text"] { width: 100%; padding: 14px; background: #0b0f19; border: 1px solid #374151; border-radius: 12px; color: white; font-size: 1rem; outline: none; text-align: center; font-family: monospace; }
     input[type="text"]:focus { border-color: #38bdf8; }
     
@@ -39,7 +43,7 @@
     canvas { width: 100%; height: 44px; background: #0b0f19; border-radius: 8px; border: 1px solid #1f2937; display: block; }
     .meter-label { font-size: 0.75rem; color: #94a3b8; text-align: left; text-transform: uppercase; margin-bottom: 4px; }
 
-    /* Calling Popups */
+    /* Modals */
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 16px; z-index: 50; }
     .modal-box { width: 100%; max-width: 340px; background: #111827; border: 1px solid #374151; border-radius: 20px; padding: 24px; text-align: center; display: flex; flex-direction: column; gap: 16px; }
     .pulse-avatar { width: 68px; height: 68px; margin: 0 auto; border-radius: 50%; background: #0284c7; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; animation: pulse-ring 1.5s infinite; }
@@ -51,32 +55,35 @@
   <div class="container">
     <header>
       <h1>VoiceLink Pro</h1>
-      <p>P2P Audio Calling with TURN Relay Support</p>
+      <p>Auto-Reconnecting P2P Voice Calling</p>
     </header>
 
-    <!-- IDLE / DIALER -->
+    <!-- DIALER SCREEN -->
     <div class="card" id="dialerScreen">
       <div>
-        <div class="meter-label" style="text-align:center;">Your Personal ID</div>
-        <div class="id-box" onclick="copyId()">
+        <div class="meter-label" style="text-align:center;">Your ID & Invite</div>
+        <div class="id-card">
           <div class="id-value" id="myPeerId">Connecting...</div>
-          <small style="color: #64748b; font-size: 0.72rem;">(Tap to copy)</small>
+          <div class="link-btn-group">
+            <button class="mini-btn" onclick="copyIdOnly()">📋 Copy ID</button>
+            <button class="mini-btn" onclick="copyInviteLink()">🔗 Copy Call Link</button>
+          </div>
         </div>
       </div>
 
       <div>
-        <label class="meter-label">Enter Peer ID</label>
+        <label class="meter-label">Enter Friend's Call ID</label>
         <input type="text" id="targetPeerId" placeholder="e.g. vl-4821" />
       </div>
 
-      <button class="btn btn-green" id="callBtn" onclick="startCallFlow()" disabled>
-        📞 Call Now
+      <button class="btn btn-green" id="callBtn" onclick="startCall()" disabled>
+        📞 Start Voice Call
       </button>
 
-      <div class="status-text" id="appStatus">Connecting to signaling network...</div>
+      <div class="status-text" id="appStatus">Connecting to WebRTC gateway...</div>
     </div>
 
-    <!-- IN-CALL SCREEN -->
+    <!-- ACTIVE CALL SCREEN -->
     <div class="card" id="activeCallScreen">
       <div>
         <div class="timer-badge" id="callTimer">00:00</div>
@@ -124,23 +131,22 @@
     <div class="modal-box">
       <div class="pulse-avatar">📞</div>
       <div>
-        <h3>Calling...</h3>
+        <h3 id="outgoingTitle">Calling...</h3>
         <p style="font-family: monospace; color: #38bdf8; margin-top: 4px;" id="dialingIdLabel">vl-XXXX</p>
-        <small style="color: #64748b;" id="dialingSubtext">Ringing...</small>
+        <small style="color: #94a3b8;" id="dialingSubtext">Connecting...</small>
       </div>
-      <button class="btn btn-red" onclick="cancelOutgoingCall()">Cancel</button>
+      <button class="btn btn-red" onclick="cancelCall()">Cancel</button>
     </div>
   </div>
 
   <audio id="remoteAudio" autoplay playsinline></audio>
 
   <script>
-    // --- STUN + TURN SERVERS (Crucial for Mobile & Symmetric NATs) ---
+    // Robust STUN + TURN config (handles NATs, Wi-Fi, and 4G/5G carriers)
     const PEER_CONFIG = {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
-        // Public TURN Relay from OpenRelay Project (bypasses carrier NAT firewalls)
         {
           urls: 'turn:openrelay.metered.ca:80',
           username: 'openrelayproject',
@@ -150,104 +156,172 @@
           urls: 'turn:openrelay.metered.ca:443',
           username: 'openrelayproject',
           credential: 'openrelayproject'
-        },
-        {
-          urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-          username: 'openrelayproject',
-          credential: 'openrelayproject'
         }
       ]
     };
 
     let peer = null;
     let localStream = null;
-    let currentCall = null;
-    let dataConn = null; // Signaling channel
-    let remotePeerId = null;
+    let currentMediaCall = null;
+    let dataConn = null;
+    let targetPeerId = null;
 
+    // Retry / Knocking engine state
+    let isDialing = false;
+    let dialAttempts = 0;
+    const MAX_DIAL_ATTEMPTS = 15; // 15 tries * 2.5s = ~38 seconds grace period
+    let retryTimer = null;
+
+    // Audio Visualizer & Timer
     let localCtx = null, localAnalyser = null, localAnim = null;
     let remoteCtx = null, remoteAnalyser = null, remoteAnim = null;
-    let timerInt = null, callStart = null;
+    let callStart = null, timerInt = null;
     let ringCtx = null, ringTimer = null;
 
     const myId = `vl-${Math.floor(1000 + Math.random() * 9000)}`;
 
     function init() {
-      peer = new Peer(myId, {
-        debug: 1,
-        config: PEER_CONFIG
-      });
+      peer = new Peer(myId, { debug: 1, config: PEER_CONFIG });
 
       peer.on('open', (id) => {
         document.getElementById('myPeerId').innerText = id;
         document.getElementById('callBtn').disabled = false;
-        document.getElementById('appStatus').innerText = "Online. Ready to connect.";
-        startHeartbeat(); // Keep connection alive
+        document.getElementById('appStatus').innerText = "Online & Ready.";
+
+        // Check if user arrived via an invite link (#call=vl-XXXX)
+        checkUrlHash();
       });
 
-      // 1. DATA CHANNEL (Signaling: Ring, Accept, Decline, Hangup)
+      // Handle Inbound Signaling
       peer.on('connection', (conn) => {
-        if (currentCall || dataConn) {
-          // If already in a call, send busy
+        if (currentMediaCall || (dataConn && dataConn.open)) {
           conn.on('open', () => conn.send({ type: 'BUSY' }));
           return;
         }
-
         dataConn = conn;
-        setupDataChannel(conn);
+        attachDataHandlers(conn);
       });
 
-      // 2. MEDIA CHANNEL (Audio)
+      // Handle Inbound Media stream
       peer.on('call', (call) => {
-        currentCall = call;
-        // Don't auto-answer yet! Wait for user to click Accept.
-      });
-
-      peer.on('disconnected', () => {
-        peer.reconnect();
+        currentMediaCall = call;
       });
 
       peer.on('error', (err) => {
-        console.error("Peer error:", err);
-        if (err.type === 'peer-unavailable') {
-          alert("Peer ID not found or offline.");
-          hangUp(false);
+        console.warn("Peer error caught:", err.type);
+
+        // SMART RETRY: If peer isn't registered yet, do NOT crash!
+        if (err.type === 'peer-unavailable' && isDialing) {
+          handlePeerUnavailableRetry();
+        } else if (err.type === 'peer-unavailable') {
+          alert("Peer ID does not exist or went offline.");
+          resetCallState();
         }
       });
     }
 
-    // --- Data Channel Protocol ---
-    function setupDataChannel(conn) {
-      conn.on('data', (data) => {
-        switch (data.type) {
+    // --- 1. Knocking / Auto-Retry Engine ---
+    function startCall() {
+      const target = document.getElementById('targetPeerId').value.trim();
+      if (!target || target === myId) {
+        alert("Enter a valid Friend ID!");
+        return;
+      }
+
+      targetPeerId = target;
+      isDialing = true;
+      dialAttempts = 0;
+
+      document.getElementById('dialingIdLabel').innerText = targetPeerId;
+      document.getElementById('outgoingTitle').innerText = "Calling...";
+      document.getElementById('dialingSubtext').innerText = "Reaching signaling server...";
+      document.getElementById('outgoingModal').style.display = 'flex';
+      playChime('outgoing');
+
+      attemptHandshake();
+    }
+
+    function attemptHandshake() {
+      if (!isDialing) return;
+      dialAttempts++;
+
+      if (dialAttempts > MAX_DIAL_ATTEMPTS) {
+        stopChime();
+        alert("Friend didn't come online. Please check the ID or invite link.");
+        cancelCall();
+        return;
+      }
+
+      if (dialAttempts > 1) {
+        document.getElementById('outgoingTitle').innerText = "Waiting for Peer...";
+        document.getElementById('dialingSubtext').innerText = `Friend hasn't opened page yet. Retrying (${dialAttempts}/${MAX_DIAL_ATTEMPTS})...`;
+      }
+
+      // Cleanup prior dead connection attempts
+      if (dataConn) {
+        try { dataConn.close(); } catch(e){}
+        dataConn = null;
+      }
+
+      dataConn = peer.connect(targetPeerId, { reliable: true });
+      attachDataHandlers(dataConn);
+
+      dataConn.on('open', () => {
+        // Connected! Cancel retry loop and send ring event
+        clearTimeout(retryTimer);
+        document.getElementById('outgoingTitle').innerText = "Ringing...";
+        document.getElementById('dialingSubtext').innerText = "Waiting for them to answer...";
+        dataConn.send({ type: 'RING' });
+      });
+    }
+
+    function handlePeerUnavailableRetry() {
+      clearTimeout(retryTimer);
+      // Wait 2.5 seconds and knock again
+      retryTimer = setTimeout(() => {
+        if (isDialing) {
+          attemptHandshake();
+        }
+      }, 2500);
+    }
+
+    // --- 2. Signaling Handlers ---
+    function attachDataHandlers(conn) {
+      conn.on('data', async (msg) => {
+        switch (msg.type) {
           case 'RING':
-            remotePeerId = conn.peer;
-            document.getElementById('callerIdLabel').innerText = remotePeerId;
+            targetPeerId = conn.peer;
+            document.getElementById('callerIdLabel').innerText = targetPeerId;
             document.getElementById('incomingModal').style.display = 'flex';
             playChime('incoming');
             break;
 
           case 'ACCEPT':
+            isDialing = false;
             stopChime();
             document.getElementById('outgoingModal').style.display = 'none';
-            // Partner accepted! Send audio stream now
-            sendAudioStream(conn.peer);
+            // Start audio transmission
+            await initiateAudioStream(conn.peer);
             break;
 
           case 'DECLINE':
-            alert("Call declined.");
-            hangUp(false);
+            isDialing = false;
+            stopChime();
+            alert("Call was declined.");
+            resetCallState();
             break;
 
           case 'CANCEL':
             stopChime();
             document.getElementById('incomingModal').style.display = 'none';
-            resetState();
+            resetCallState();
             break;
 
           case 'BUSY':
+            isDialing = false;
+            stopChime();
             alert("User is currently on another call.");
-            hangUp(false);
+            resetCallState();
             break;
 
           case 'HANGUP':
@@ -257,44 +331,25 @@
       });
 
       conn.on('close', () => {
-        hangUp(false);
+        if (!isDialing) hangUp(false);
       });
     }
 
-    // --- Outgoing Call Flow ---
-    async function startCallFlow() {
-      const target = document.getElementById('targetPeerId').value.trim();
-      if (!target || target === myId) return alert("Enter a valid Friend ID!");
-
+    async function initiateAudioStream(peerId) {
       const gotMic = await getMic();
-      if (!gotMic) return;
+      if (!gotMic) {
+        hangUp(true);
+        return;
+      }
 
-      remotePeerId = target;
-      document.getElementById('dialingIdLabel').innerText = target;
-      document.getElementById('outgoingModal').style.display = 'flex';
-      playChime('outgoing');
-
-      // 1. Establish Signaling Link
-      dataConn = peer.connect(target, { reliable: true });
-      setupDataChannel(dataConn);
-
-      dataConn.on('open', () => {
-        dataConn.send({ type: 'RING' });
+      currentMediaCall = peer.call(peerId, localStream);
+      currentMediaCall.on('stream', (remoteStream) => {
+        activateCallUI(remoteStream, peerId);
       });
+      currentMediaCall.on('close', () => hangUp(false));
     }
 
-    // Caller transmits media once Receiver has accepted
-    function sendAudioStream(targetId) {
-      currentCall = peer.call(targetId, localStream);
-      
-      currentCall.on('stream', (remoteStream) => {
-        attachSession(remoteStream, targetId);
-      });
-
-      currentCall.on('close', () => hangUp(false));
-    }
-
-    // --- Incoming Call Flow ---
+    // --- 3. Answering & Teardown ---
     async function acceptCall() {
       stopChime();
       document.getElementById('incomingModal').style.display = 'none';
@@ -302,27 +357,25 @@
       const gotMic = await getMic();
       if (!gotMic) {
         if (dataConn) dataConn.send({ type: 'DECLINE' });
-        resetState();
+        resetCallState();
         return;
       }
 
-      // Notify caller that we accepted
       dataConn.send({ type: 'ACCEPT' });
 
-      // When caller initiates the media call, answer with our stream
-      if (currentCall) {
-        currentCall.answer(localStream);
-        currentCall.on('stream', (remoteStream) => {
-          attachSession(remoteStream, currentCall.peer);
+      // If caller's media stream arrives
+      if (currentMediaCall) {
+        currentMediaCall.answer(localStream);
+        currentMediaCall.on('stream', (remoteStream) => {
+          activateCallUI(remoteStream, currentMediaCall.peer);
         });
-        currentCall.on('close', () => hangUp(false));
+        currentMediaCall.on('close', () => hangUp(false));
       } else {
-        // If media packet hasn't landed yet, listen for it
         peer.once('call', (call) => {
-          currentCall = call;
+          currentMediaCall = call;
           call.answer(localStream);
           call.on('stream', (remoteStream) => {
-            attachSession(remoteStream, call.peer);
+            activateCallUI(remoteStream, call.peer);
           });
           call.on('close', () => hangUp(false));
         });
@@ -333,16 +386,21 @@
       stopChime();
       document.getElementById('incomingModal').style.display = 'none';
       if (dataConn) dataConn.send({ type: 'DECLINE' });
-      resetState();
+      resetCallState();
     }
 
-    function cancelOutgoingCall() {
-      if (dataConn) dataConn.send({ type: 'CANCEL' });
-      hangUp(false);
+    function cancelCall() {
+      isDialing = false;
+      clearTimeout(retryTimer);
+      stopChime();
+      if (dataConn && dataConn.open) {
+        dataConn.send({ type: 'CANCEL' });
+      }
+      resetCallState();
+      document.getElementById('outgoingModal').style.display = 'none';
     }
 
-    // --- Active Session ---
-    function attachSession(stream, partnerId) {
+    function activateCallUI(stream, partnerId) {
       document.getElementById('dialerScreen').style.display = 'none';
       document.getElementById('activeCallScreen').style.display = 'flex';
       document.getElementById('partnerName').innerText = `Talking with: ${partnerId}`;
@@ -353,7 +411,6 @@
 
       visualize(localStream, 'localCanvas', 'local');
       visualize(stream, 'remoteCanvas', 'remote');
-
       startTimer();
     }
 
@@ -363,7 +420,7 @@
         dataConn.send({ type: 'HANGUP' });
       }
 
-      resetState();
+      resetCallState();
 
       document.getElementById('outgoingModal').style.display = 'none';
       document.getElementById('incomingModal').style.display = 'none';
@@ -372,20 +429,24 @@
       document.getElementById('appStatus').innerText = "Call ended.";
     }
 
-    function resetState() {
-      if (currentCall) { currentCall.close(); currentCall = null; }
+    function resetCallState() {
+      isDialing = false;
+      clearTimeout(retryTimer);
+
+      if (currentMediaCall) { currentMediaCall.close(); currentMediaCall = null; }
       if (dataConn) { dataConn.close(); dataConn = null; }
       if (localStream) {
         localStream.getTracks().forEach(t => t.stop());
         localStream = null;
       }
+
       document.getElementById('remoteAudio').srcObject = null;
       stopVisualizer('local');
       stopVisualizer('remote');
       stopTimer();
     }
 
-    // --- Hardware Access ---
+    // --- 4. Microphones & Controls ---
     async function getMic() {
       try {
         localStream = await navigator.mediaDevices.getUserMedia({
@@ -394,7 +455,7 @@
         });
         return true;
       } catch (err) {
-        alert("Microphone permission required to make calls.");
+        alert("Microphone permission denied! Please allow mic access.");
         return false;
       }
     }
@@ -416,7 +477,7 @@
       document.getElementById('deafenBtn').classList.toggle('active-off', deaf);
     }
 
-    // --- Visualizer ---
+    // --- 5. Visualizer ---
     function visualize(stream, canvasId, type) {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const src = ctx.createMediaStreamSource(stream);
@@ -463,7 +524,7 @@
       }
     }
 
-    // --- Timer ---
+    // --- 6. Timer & Tones ---
     function startTimer() {
       callStart = Date.now();
       timerInt = setInterval(() => {
@@ -479,7 +540,6 @@
       document.getElementById('callTimer').innerText = '00:00';
     }
 
-    // --- Ringtone Synthesis ---
     function playChime(type) {
       stopChime();
       ringCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -489,6 +549,7 @@
         const g = ringCtx.createGain();
         osc.connect(g); g.connect(ringCtx.destination);
         const t = ringCtx.currentTime;
+
         if (type === 'outgoing') {
           osc.frequency.setValueAtTime(440, t);
           g.gain.setValueAtTime(0.08, t);
@@ -511,18 +572,29 @@
       if (ringCtx && ringCtx.state !== 'closed') ringCtx.close();
     }
 
-    // Keep WebSocket Alive on PeerJS Public Server
-    function startHeartbeat() {
-      setInterval(() => {
-        if (peer && peer.socket && peer.socket._open) {
-          peer.socket.send({ type: 'HEARTBEAT' });
+    // --- 7. URL Linking & Sharing ---
+    function checkUrlHash() {
+      const hash = window.location.hash;
+      if (hash && hash.includes('#call=')) {
+        const target = hash.replace('#call=', '').trim();
+        if (target && target !== myId) {
+          document.getElementById('targetPeerId').value = target;
+          document.getElementById('appStatus').innerText = `Target ID autofilled from link: ${target}`;
         }
-      }, 20000);
+      }
     }
 
-    function copyId() {
-      navigator.clipboard.writeText(document.getElementById('myPeerId').innerText);
-      alert("ID Copied!");
+    function copyIdOnly() {
+      navigator.clipboard.writeText(myId);
+      alert(`Copied ID: ${myId}`);
+    }
+
+    function copyInviteLink() {
+      // Build an instant link pointing to this same file with the hash
+      const cleanUrl = window.location.origin + window.location.pathname;
+      const inviteUrl = `${cleanUrl}#call=${myId}`;
+      navigator.clipboard.writeText(inviteUrl);
+      alert(`Invite link copied to clipboard!\nSend this to your friend: ${inviteUrl}`);
     }
 
     window.addEventListener('DOMContentLoaded', init);
